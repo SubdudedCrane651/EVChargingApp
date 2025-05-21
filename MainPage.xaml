@@ -3,13 +3,33 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
               xmlns:chart="clr-namespace:Syncfusion.Maui.Charts;assembly=Syncfusion.Maui.Charts"
              x:Class="EVCharging.MainPage">
-    <ScrollView>
-    <VerticalStackLayout Padding="20">
+
+    <ScrollView VerticalScrollBarVisibility="Always">
+            <VerticalStackLayout Padding="20">
         <Label Text="EV Charging Report For Our Equinox RS 2024" FontSize="24" />
+      
+        <!--<Editor x:Name="reportText" HeightRequest="200" IsReadOnly="True" />-->
 
-        <Editor x:Name="reportText" HeightRequest="200" IsReadOnly="True" />
+            <ListView x:Name="reportListView" VerticalScrollBarVisibility="Always"
+          HeightRequest="150" SeparatorVisibility="Default"
+          ItemsSource="{Binding EVConnections}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <StackLayout Padding="10">
+                                <Label Text="{Binding Date}" FontAttributes="Bold" />
+                                <Label Text="{Binding HoursCharged, StringFormat='Hours Charged: {0}'}" />
+                                <Label Text="{Binding Cost, StringFormat='Cost: ${0:F2}'}" />
+                                <Label Text="{Binding Km, StringFormat='KM Driven: {0}'}" />
+                                <Label Text="{Binding Kwh, StringFormat='Energy Used (kWh): {0}'}" />
+                                <Label Text="{Binding Location, StringFormat='Location: {0}'}" />
+                            </StackLayout>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
 
-        <Label x:Name="totalLabel" Text="" FontSize="18" TextColor="Green" />
+            <Label x:Name="totalLabel" Text="" FontSize="18" TextColor="Green" />
 
             <Picker x:Name="chartPicker" SelectedIndex="0" SelectedIndexChanged="Picker_SelectionChanged">
                 <Picker.Items>

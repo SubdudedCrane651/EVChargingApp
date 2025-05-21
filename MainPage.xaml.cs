@@ -1,8 +1,9 @@
-﻿using Syncfusion.Maui.Charts;
-using System.Collections.Generic;
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
+using Syncfusion.Maui.Charts;
 using System;
 using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -42,29 +43,26 @@ namespace EVCharging
             }
             catch (Exception ex)
             {
-                reportText.Text = $"Error fetching data: {ex.Message}";
+                //reportText.Text = $"Error fetching data: {ex.Message}";
                 await DisplayAlert("Alert", ex.Message, "OK");
             }
         }
 
         private void DisplayReport()
         {
-            string report = "";
-
             // Sort data from oldest to newest
-            var sortedData = evData.OrderBy(entry => DateTime.Parse(entry.Date)).ToList();
+            //var sortedData = evData.OrderBy(entry => DateTime.Parse(entry.Date)).ToList();
 
-            double totalCost = 0, totalKm = 0, totalKwh = 0;
+            // Sort data from newest to oldest
+            var sortedData = evData.OrderByDescending(entry => DateTime.Parse(entry.Date)).ToList();
 
-            foreach (var entry in sortedData)
-            {
-                report += $"Date: {entry.Date}\nHours Charged: {entry.Hours_Charged}\nCost: ${entry.Cost}\nKM Driven: {entry.Km}\nEnergy Used: {entry.Kwh} kWh\nLocation: {entry.Location}\n---\n";
-                totalCost += entry.Cost;
-                totalKm += entry.Km;
-                totalKwh += entry.Kwh;
-            }
+            reportListView.ItemsSource = sortedData;
 
-            reportText.Text = report;
+            // Calculate totals
+            double totalCost = sortedData.Sum(entry => entry.Cost);
+            double totalKm = sortedData.Sum(entry => entry.Km);
+            double totalKwh = sortedData.Sum(entry => entry.Kwh);
+
             totalLabel.Text = $"Total Cost: ${totalCost:F2} | Total KM: {totalKm} | Total kWh: {totalKwh:F2}";
         }
 
