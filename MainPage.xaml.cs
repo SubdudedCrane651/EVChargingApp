@@ -22,32 +22,41 @@ namespace EVCharging
 
         public async Task FetchData()
         {
-            try { 
-            using HttpClient client = new HttpClient();
-            var requestData = new { Command = "LIST" };
-            var content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
+            try
+            {
+                HttpClientHandler handler = new HttpClientHandler();
+                handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+                using HttpClient client = new HttpClient(handler);
+                //using HttpClient client = new HttpClient();
+                var requestData = new { Command = "LIST" };
+                var content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await client.PostAsync("https://rj2shop.com:8003/ev_connections?Command=LIST", content);
-            response.EnsureSuccessStatusCode();
+                HttpResponseMessage response = await client.PostAsync("https://rj2shop.com:8003/ev_connections?Command=LIST", content);
+                response.EnsureSuccessStatusCode();
 
-            string responseData = await response.Content.ReadAsStringAsync();
+                string responseData = await response.Content.ReadAsStringAsync();
 
-            evData = JsonSerializer.Deserialize<List<EVData>>(responseData);
+                evData = JsonSerializer.Deserialize<List<EVData>>(responseData);
 
                 DisplayReport();
             }
             catch (Exception ex)
             {
                 reportText.Text = $"Error fetching data: {ex.Message}";
+                await DisplayAlert("Alert", ex.Message, "OK");
             }
         }
 
         private void DisplayReport()
         {
             string report = "";
+
+            // Sort data from oldest to newest
+            var sortedData = evData.OrderBy(entry => DateTime.Parse(entry.Date)).ToList();
+
             double totalCost = 0, totalKm = 0, totalKwh = 0;
 
-            foreach (var entry in evData)
+            foreach (var entry in sortedData)
             {
                 report += $"Date: {entry.Date}\nHours Charged: {entry.Hours_Charged}\nCost: ${entry.Cost}\nKM Driven: {entry.Km}\nEnergy Used: {entry.Kwh} kWh\nLocation: {entry.Location}\n---\n";
                 totalCost += entry.Cost;
