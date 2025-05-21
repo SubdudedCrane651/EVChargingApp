@@ -39,6 +39,8 @@ namespace EVCharging
 
                 evData = JsonSerializer.Deserialize<List<EVData>>(responseData);
 
+                ProcessYearlyData();
+
                 DisplayReport();
             }
             catch (Exception ex)
@@ -46,6 +48,25 @@ namespace EVCharging
                 //reportText.Text = $"Error fetching data: {ex.Message}";
                 await DisplayAlert("Alert", ex.Message, "OK");
             }
+        }
+
+        private void ProcessYearlyData()
+        {
+            var years = evData.Select(entry => DateTime.Parse(entry.Date).Year)
+                              .Distinct()
+                              .OrderByDescending(y => y)
+                              .ToList();
+
+            // Populate the Picker with yearly options
+            chartPicker.Items.Clear();
+            foreach (var year in years)
+            {
+                chartPicker.Items.Add($"Monthly Costs {year}");
+                chartPicker.Items.Add($"EV vs Gas Cost {year}");
+            }
+
+            // Set the default selection to the latest year
+            chartPicker.SelectedIndex = 0;
         }
 
         private void DisplayReport()
@@ -66,38 +87,28 @@ namespace EVCharging
             totalLabel.Text = $"Total Cost: ${totalCost:F2} | Total KM: {totalKm} | Total kWh: {totalKwh:F2}";
         }
 
-        private void ShowChartButton_Clicked(object sender, EventArgs e)
+        //private void ShowChartButton_Clicked(object sender, EventArgs e)
+        //{
+        //    try
+        //    {
+        //        string selectedChart = chartPicker.SelectedItem.ToString();
+        //        if (selectedChart == "Monthly Costs") GenerateMonthlyCostChart();
+        //        else GenerateEVvsGasChart();
+        //    }
+        //    catch { }
+        //}
+
+        private void GenerateMonthlyCostChart(int year)
         {
-            try
-            {
-                string selectedChart = chartPicker.SelectedItem.ToString();
-                if (selectedChart == "Monthly Costs") GenerateMonthlyCostChart();
-                else GenerateEVvsGasChart();
-            }
-            catch { }
-        }
+            var monthlyData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
+                                    .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
+                                    .ToDictionary(g => g.Key, g => g.Sum(e => e.Cost));
 
-        private void GenerateMonthlyCostChart()
-        {
-            var monthCosts = new Dictionary<string, double>();
+            var sortedMonths = monthlyData.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
 
-            foreach (var entry in evData)
-            {
-                DateTime dateObj = DateTime.Parse(entry.Date);
-                string month = dateObj.ToString("MMMM"); // Get month name
-
-                if (monthCosts.ContainsKey(month))
-                    monthCosts[month] += entry.Cost;
-                else
-                    monthCosts[month] = entry.Cost;
-            }
-
-            var sortedMonths = monthCosts.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
-
-            // Populate Syncfusion Chart
             var series = new ColumnSeries
             {
-                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthCosts[month])).ToList(),
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthlyData[month])).ToList(),
                 XBindingPath = "Month",
                 YBindingPath = "Cost",
                 Fill = new SolidColorBrush(Colors.Green)
@@ -107,47 +118,32 @@ namespace EVCharging
             syncfusionChart.Series.Add(series);
         }
 
-        private void GenerateEVvsGasChart()
+        private void GenerateEVvsGasChart(int year)
         {
             const double gasCostPerLiter = 1.50;
             const double gasEfficiencyKmPerLiter = 10;
 
-            var monthEvCosts = new Dictionary<string, double>();
-            var monthGasCosts = new Dictionary<string, double>();
+            var monthlyEVData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
+                                      .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
+                                      .ToDictionary(g => g.Key, g => g.Sum(e => e.Cost));
 
-            foreach (var entry in evData)
-            {
-                DateTime dateObj = DateTime.Parse(entry.Date);
-                string month = dateObj.ToString("MMMM");
+            var monthlyGasData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
+                                       .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
+                                       .ToDictionary(g => g.Key, g => g.Sum(e => (e.Km / gasEfficiencyKmPerLiter) * gasCostPerLiter));
 
-                if (monthEvCosts.ContainsKey(month))
-                    monthEvCosts[month] += entry.Cost;
-                else
-                    monthEvCosts[month] = entry.Cost;
+            var sortedMonths = monthlyEVData.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
 
-                double gasCost = (entry.Km / gasEfficiencyKmPerLiter) * gasCostPerLiter;
-
-                if (monthGasCosts.ContainsKey(month))
-                    monthGasCosts[month] += gasCost;
-                else
-                    monthGasCosts[month] = gasCost;
-            }
-
-            var sortedMonths = monthEvCosts.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
-
-            // Create EV cost series (Green)
             var evSeries = new ColumnSeries
             {
-                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthEvCosts[month])).ToList(),
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthlyEVData[month])).ToList(),
                 XBindingPath = "Month",
                 YBindingPath = "Cost",
                 Fill = new SolidColorBrush(Colors.Green)
             };
 
-            // Create Gas cost series (Red)
             var gasSeries = new ColumnSeries
             {
-                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthGasCosts[month])).ToList(),
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthlyGasData[month])).ToList(),
                 XBindingPath = "Month",
                 YBindingPath = "Cost",
                 Fill = new SolidColorBrush(Colors.Red)
@@ -172,10 +168,33 @@ namespace EVCharging
 
         private void Picker_SelectionChanged(object sender, EventArgs e)
         {
-            if (chartPicker.SelectedItem.ToString() == "Monthly Costs")
-                GenerateMonthlyCostChart();
-            else
-                GenerateEVvsGasChart();
+            string selectedChart = chartPicker.SelectedItem.ToString();
+            var match = System.Text.RegularExpressions.Regex.Match(selectedChart, @"\d{4}");
+
+            if (match.Success)
+            {
+                int selectedYear = int.Parse(match.Value);
+
+                // Calculate total cost, km, and kWh for the selected year
+                var yearlyData = evData.Where(entry => DateTime.Parse(entry.Date).Year == selectedYear).ToList();
+                double totalCost = yearlyData.Sum(entry => entry.Cost);
+                double totalKm = yearlyData.Sum(entry => entry.Km);
+                double totalKwh = yearlyData.Sum(entry => entry.Kwh);
+
+                // Update the label to show totals for the selected year
+                totalLabel_byyear.Text = $"Year: {selectedYear} | Total Cost: ${totalCost:F2} | Total KM: {totalKm} | Total kWh: {totalKwh:F2}";
+
+                selectedChart = chartPicker.SelectedItem.ToString();
+                match = System.Text.RegularExpressions.Regex.Match(selectedChart, @"\d{4}");
+
+                if (match.Success)
+                {
+                    if (selectedChart.Contains("Monthly Costs"))
+                        GenerateMonthlyCostChart(selectedYear);
+                    else
+                        GenerateEVvsGasChart(selectedYear);
+                }
+            }
         }
 
         private class EVData

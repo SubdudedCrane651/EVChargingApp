@@ -37,7 +37,9 @@
                     <x:String>EV vs Gas cost</x:String>
                 </Picker.Items>
             </Picker>
-        
+
+            <Label x:Name="totalLabel_byyear" Text="" FontSize="18" TextColor="Green" />
+
             <!--<Button Text="Show Chart" Clicked="ShowChartButton_Clicked" />-->
         <chart:SfCartesianChart x:Name="syncfusionChart" HeightRequest="300" WidthRequest="300">
             <chart:SfCartesianChart.XAxes>
