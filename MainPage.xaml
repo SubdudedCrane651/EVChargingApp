@@ -10,7 +10,7 @@
       
         <!--<Editor x:Name="reportText" HeightRequest="200" IsReadOnly="True" />-->
 
-            <ListView x:Name="reportListView" VerticalScrollBarVisibility="Always"
+            <ListView x:Name="reportListView" HasUnevenRows="True" VerticalScrollBarVisibility="Always"
           HeightRequest="150" SeparatorVisibility="Default"
           ItemsSource="{Binding EVConnections}">
                 <ListView.ItemTemplate>
