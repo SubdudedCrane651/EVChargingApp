@@ -5,7 +5,7 @@
              x:Class="EVCharging.MainPage">
     <ScrollView>
     <VerticalStackLayout Padding="20">
-        <Label Text="EV Charging Report" FontSize="24" />
+        <Label Text="EV Charging Report For Our Equinox RS 2024" FontSize="24" />
 
         <Editor x:Name="reportText" HeightRequest="200" IsReadOnly="True" />
 

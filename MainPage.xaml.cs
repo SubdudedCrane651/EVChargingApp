@@ -61,9 +61,13 @@ namespace EVCharging
 
         private void ShowChartButton_Clicked(object sender, EventArgs e)
         {
-            string selectedChart = chartPicker.SelectedItem.ToString();
-            if (selectedChart == "Monthly Costs") GenerateMonthlyCostChart();
-            else GenerateEVvsGasChart();
+            try
+            {
+                string selectedChart = chartPicker.SelectedItem.ToString();
+                if (selectedChart == "Monthly Costs") GenerateMonthlyCostChart();
+                else GenerateEVvsGasChart();
+            }
+            catch { }
         }
 
         private void GenerateMonthlyCostChart()
