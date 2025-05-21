@@ -1,11 +1,12 @@
-﻿using Microcharts;
+﻿using Syncfusion.Maui.Charts;
+using System.Collections.Generic;
 using Microsoft.Maui.Controls;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+
 
 namespace EVCharging
 {
@@ -67,51 +68,95 @@ namespace EVCharging
 
         private void GenerateMonthlyCostChart()
         {
-            var entries = new List<ChartEntry>();
+            var monthCosts = new Dictionary<string, double>();
 
             foreach (var entry in evData)
             {
-                entries.Add(new ChartEntry((float)entry.Cost)
-                {
-                    Label = entry.Date,
-                    ValueLabel = entry.Cost.ToString(),
-                    Color = SKColor.Parse("#00FF00") // Green
-                });
+                DateTime dateObj = DateTime.Parse(entry.Date);
+                string month = dateObj.ToString("MMMM"); // Get month name
+
+                if (monthCosts.ContainsKey(month))
+                    monthCosts[month] += entry.Cost;
+                else
+                    monthCosts[month] = entry.Cost;
             }
 
-            chartView.Chart = new BarChart
+            var sortedMonths = monthCosts.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
+
+            // Populate Syncfusion Chart
+            var series = new ColumnSeries
             {
-                Entries = entries,
-                BackgroundColor = SKColors.Transparent
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthCosts[month])).ToList(),
+                XBindingPath = "Month",
+                YBindingPath = "Cost",
+                Fill = new SolidColorBrush(Colors.Green)
             };
+
+            syncfusionChart.Series.Clear();
+            syncfusionChart.Series.Add(series);
         }
 
         private void GenerateEVvsGasChart()
         {
-            var entries = new List<ChartEntry>();
+            const double gasCostPerLiter = 1.50;
+            const double gasEfficiencyKmPerLiter = 10;
+
+            var monthEvCosts = new Dictionary<string, double>();
+            var monthGasCosts = new Dictionary<string, double>();
 
             foreach (var entry in evData)
             {
-                double gasCost = (entry.Km / 10) * 1.50;
-                entries.Add(new ChartEntry((float)entry.Cost)
-                {
-                    Label = entry.Date,
-                    ValueLabel = entry.Cost.ToString(),
-                    Color = SKColor.Parse("#00FF00") // EV Green
-                });
-                entries.Add(new ChartEntry((float)gasCost)
-                {
-                    Label = entry.Date,
-                    ValueLabel = gasCost.ToString(),
-                    Color = SKColor.Parse("#FF0000") // Gas Red
-                });
+                DateTime dateObj = DateTime.Parse(entry.Date);
+                string month = dateObj.ToString("MMMM");
+
+                if (monthEvCosts.ContainsKey(month))
+                    monthEvCosts[month] += entry.Cost;
+                else
+                    monthEvCosts[month] = entry.Cost;
+
+                double gasCost = (entry.Km / gasEfficiencyKmPerLiter) * gasCostPerLiter;
+
+                if (monthGasCosts.ContainsKey(month))
+                    monthGasCosts[month] += gasCost;
+                else
+                    monthGasCosts[month] = gasCost;
             }
 
-            chartView.Chart = new BarChart
+            var sortedMonths = monthEvCosts.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
+
+            // Create EV cost series (Green)
+            var evSeries = new ColumnSeries
             {
-                Entries = entries,
-                BackgroundColor = SKColors.Transparent
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthEvCosts[month])).ToList(),
+                XBindingPath = "Month",
+                YBindingPath = "Cost",
+                Fill = new SolidColorBrush(Colors.Green)
             };
+
+            // Create Gas cost series (Red)
+            var gasSeries = new ColumnSeries
+            {
+                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthGasCosts[month])).ToList(),
+                XBindingPath = "Month",
+                YBindingPath = "Cost",
+                Fill = new SolidColorBrush(Colors.Red)
+            };
+
+            syncfusionChart.Series.Clear();
+            syncfusionChart.Series.Add(evSeries);
+            syncfusionChart.Series.Add(gasSeries);
+        }
+
+        public class ChartData
+        {
+            public string Month { get; set; }
+            public double Cost { get; set; }
+
+            public ChartData(string month, double cost)
+            {
+                Month = month;
+                Cost = cost;
+            }
         }
 
         private class EVData
