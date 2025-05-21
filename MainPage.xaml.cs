@@ -163,6 +163,14 @@ namespace EVCharging
             }
         }
 
+        private void Picker_SelectionChanged(object sender, EventArgs e)
+        {
+            if (chartPicker.SelectedItem.ToString() == "Monthly Costs")
+                GenerateMonthlyCostChart();
+            else
+                GenerateEVvsGasChart();
+        }
+
         private class EVData
         {
             public string Date { get; set; }

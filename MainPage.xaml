@@ -11,13 +11,14 @@
 
         <Label x:Name="totalLabel" Text="" FontSize="18" TextColor="Green" />
 
-        <Picker x:Name="chartPicker">
-            <Picker.Items>
-                <x:String>Monthly Costs</x:String>
-                <x:String>EV vs Gas cost</x:String>
-            </Picker.Items>
-        </Picker>
-        <Button Text="Show Chart" Clicked="ShowChartButton_Clicked" />
+            <Picker x:Name="chartPicker" SelectedIndex="0" SelectedIndexChanged="Picker_SelectionChanged">
+                <Picker.Items>
+                    <x:String>Monthly Costs</x:String>
+                    <x:String>EV vs Gas cost</x:String>
+                </Picker.Items>
+            </Picker>
+        
+            <!--<Button Text="Show Chart" Clicked="ShowChartButton_Clicked" />-->
         <chart:SfCartesianChart x:Name="syncfusionChart" HeightRequest="300" WidthRequest="300">
             <chart:SfCartesianChart.XAxes>
                 <chart:CategoryAxis/>
