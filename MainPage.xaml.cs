@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -98,40 +99,46 @@ namespace EVCharging
         //    catch { }
         //}
 
-        private void GenerateMonthlyCostChart(int year)
+private void GenerateMonthlyCostChart(int year)
+    {
+        var systemCulture = CultureInfo.CurrentCulture; // Detects system language
+
+        var monthlyData = evData.Where(entry => DateTime.Parse(entry.Date, systemCulture).Year == year)
+                                .GroupBy(entry => DateTime.Parse(entry.Date, systemCulture).ToString("MMMM", systemCulture))
+                                .ToDictionary(g => g.Key, g => g.Sum(e => e.Cost));
+
+        var sortedMonths = monthlyData.Keys
+                                      .OrderBy(m => DateTime.ParseExact(m, "MMMM", systemCulture).Month)
+                                      .ToList();
+
+        var series = new ColumnSeries
         {
-            var monthlyData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
-                                    .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
-                                    .ToDictionary(g => g.Key, g => g.Sum(e => e.Cost));
+            ItemsSource = sortedMonths.Select(month => new ChartData(month, monthlyData[month])).ToList(),
+            XBindingPath = "Month",
+            YBindingPath = "Cost",
+            Fill = new SolidColorBrush(Colors.Green)
+        };
 
-            var sortedMonths = monthlyData.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
+        syncfusionChart.Series.Clear();
+        syncfusionChart.Series.Add(series);
+    }
 
-            var series = new ColumnSeries
-            {
-                ItemsSource = sortedMonths.Select(month => new ChartData(month, monthlyData[month])).ToList(),
-                XBindingPath = "Month",
-                YBindingPath = "Cost",
-                Fill = new SolidColorBrush(Colors.Green)
-            };
-
-            syncfusionChart.Series.Clear();
-            syncfusionChart.Series.Add(series);
-        }
-
-        private void GenerateEVvsGasChart(int year)
+    private void GenerateEVvsGasChart(int year)
         {
             const double gasCostPerLiter = 1.50;
             const double gasEfficiencyKmPerLiter = 10;
 
-            var monthlyEVData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
-                                      .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
+            var systemCulture = CultureInfo.CurrentCulture; // Detects system language
+
+            var monthlyEVData = evData.Where(entry => DateTime.Parse(entry.Date, systemCulture).Year == year)
+                                      .GroupBy(entry => DateTime.Parse(entry.Date, systemCulture).ToString("MMMM", systemCulture))
                                       .ToDictionary(g => g.Key, g => g.Sum(e => e.Cost));
 
-            var monthlyGasData = evData.Where(entry => DateTime.Parse(entry.Date).Year == year)
-                                       .GroupBy(entry => DateTime.Parse(entry.Date).ToString("MMMM"))
+            var monthlyGasData = evData.Where(entry => DateTime.Parse(entry.Date, systemCulture).Year == year)
+                                       .GroupBy(entry => DateTime.Parse(entry.Date, systemCulture).ToString("MMMM", systemCulture))
                                        .ToDictionary(g => g.Key, g => g.Sum(e => (e.Km / gasEfficiencyKmPerLiter) * gasCostPerLiter));
 
-            var sortedMonths = monthlyEVData.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", System.Globalization.CultureInfo.InvariantCulture).Month).ToList();
+            var sortedMonths = monthlyEVData.Keys.OrderBy(m => DateTime.ParseExact(m, "MMMM", systemCulture).Month).ToList();
 
             var evSeries = new ColumnSeries
             {
